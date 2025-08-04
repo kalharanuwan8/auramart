@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Toast from '../../components/common/Toast';
@@ -73,13 +73,22 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Add Back Button */}
+      <Link
+        to="/"
+        className="absolute top-4 left-4 p-2 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5 mr-1" />
+        <span>Back to Home</span>
+      </Link>
+
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center space-x-2 mb-8">
             <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">FM</span>
+              <span className="text-white font-bold">AM</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">FashionMarket</span>
+            <span className="text-2xl font-bold text-gray-900">AuraMarket</span>
           </Link>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
           <p className="text-gray-600">Sign in to your account</p>
@@ -90,11 +99,10 @@ const LoginPage = () => {
             {/* User Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Account Type</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { value: 'customer', label: 'Customer' },
-                  { value: 'seller', label: 'Seller' },
-                  { value: 'admin', label: 'Admin' }
+                  { value: 'seller', label: 'Seller' }
                 ].map((type) => (
                   <label key={type.value} className="relative">
                     <input
@@ -159,15 +167,11 @@ const LoginPage = () => {
             </div>
 
             {/* Admin Credentials Note */}
-            {formData.userType === 'admin' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Admin Login:</strong><br />
-                  Email: admin@fashionmarket.com<br />
-                  Password: admin123
-                </p>
-              </div>
-            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>Admin Access:</strong> Use admin@auramarket.lk / admin123 to access admin dashboard
+              </p>
+            </div>
 
             {/* Submit Button */}
             <Button
@@ -180,32 +184,28 @@ const LoginPage = () => {
             </Button>
 
             {/* Google Sign In (Customer & Seller only) */}
-            {formData.userType !== 'admin' && (
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
               </div>
-            )}
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
 
-            {formData.userType !== 'admin' && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                size="lg"
-              >
-                <img 
-                  src="https://developers.google.com/identity/images/g-logo.png" 
-                  alt="Google" 
-                  className="w-5 h-5 mr-2"
-                />
-                Sign in with Google
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <img 
+                src="https://developers.google.com/identity/images/g-logo.png" 
+                alt="Google" 
+                className="w-5 h-5 mr-2"
+              />
+              Sign in with Google
+            </Button>
           </form>
 
           <div className="mt-6 text-center">

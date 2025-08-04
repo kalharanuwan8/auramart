@@ -66,14 +66,30 @@ const HomePage = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary-500 to-primary-700 text-white py-20">
+      <section className="relative bg-gradient-to-r from-primary-500 to-primary-700 text-white py-20 overflow-hidden">
+        {/* Background Images */}
+        <div className="absolute inset-0 flex">
+          <div className="w-1/3 h-full bg-cover bg-center transition-transform duration-700 hover:-translate-x-4" 
+               style={{backgroundImage: 'url(https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=800)'}}>
+            <div className="w-full h-full bg-black bg-opacity-40"></div>
+          </div>
+          <div className="w-1/3 h-full bg-cover bg-center transition-transform duration-700 hover:-translate-x-4" 
+               style={{backgroundImage: 'url(https://images.pexels.com/photos/1337477/pexels-photo-1337477.jpeg?auto=compress&cs=tinysrgb&w=800)'}}>
+            <div className="w-full h-full bg-black bg-opacity-40"></div>
+          </div>
+          <div className="w-1/3 h-full bg-cover bg-center transition-transform duration-700 hover:-translate-x-4" 
+               style={{backgroundImage: 'url(https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg?auto=compress&cs=tinysrgb&w=800)'}}>
+            <div className="w-full h-full bg-black bg-opacity-40"></div>
+          </div>
+        </div>
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
+          <div className="text-center relative z-10">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
               Discover Fashion
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90 animate-slide-up">
-              Connect with top sellers and find your perfect style
+              Connect with top sellers across Sri Lanka and find your perfect style
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
               <Button size="lg" variant="secondary" asChild>
@@ -92,29 +108,29 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Package className="h-8 w-8 text-primary-500" />
+              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center group-hover:bg-primary-500 group-hover:scale-110 transition-all duration-300">
+                <Package className="h-8 w-8 text-primary-500 group-hover:text-white transition-colors duration-300" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">10K+</h3>
               <p className="text-gray-600">Products</p>
             </div>
             <div className="text-center">
-              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Users className="h-8 w-8 text-primary-500" />
+              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center group-hover:bg-primary-500 group-hover:scale-110 transition-all duration-300">
+                <Users className="h-8 w-8 text-primary-500 group-hover:text-white transition-colors duration-300" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">500+</h3>
               <p className="text-gray-600">Sellers</p>
             </div>
             <div className="text-center">
-              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <TrendingUp className="h-8 w-8 text-primary-500" />
+              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center group-hover:bg-primary-500 group-hover:scale-110 transition-all duration-300">
+                <TrendingUp className="h-8 w-8 text-primary-500 group-hover:text-white transition-colors duration-300" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">50K+</h3>
               <p className="text-gray-600">Happy Customers</p>
             </div>
             <div className="text-center">
-              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Star className="h-8 w-8 text-primary-500" />
+              <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center group-hover:bg-primary-500 group-hover:scale-110 transition-all duration-300">
+                <Star className="h-8 w-8 text-primary-500 group-hover:text-white transition-colors duration-300" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">4.8</h3>
               <p className="text-gray-600">Average Rating</p>
@@ -127,20 +143,15 @@ const HomePage = () => {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Shop by Category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="flex flex-wrap justify-center gap-4">
             {categories.slice(0, 8).map((category, index) => (
-              <Link
+              <button
                 key={category}
-                to={`/category/${category}`}
-                className="group relative bg-gray-100 rounded-xl p-6 hover:bg-primary-50 transition-all duration-300 text-center"
+                onClick={() => handleFiltersChange({ ...filters, category })}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-primary-500 hover:text-white transition-all duration-300 transform hover:scale-105"
               >
-                <div className="bg-primary-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 group-hover:bg-primary-200 transition-colors">
-                  <Package className="h-8 w-8 text-primary-500 mx-auto" />
-                </div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
-                  {category}
-                </h3>
-              </Link>
+                {category}
+              </button>
             ))}
           </div>
         </div>

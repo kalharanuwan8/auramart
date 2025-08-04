@@ -66,15 +66,16 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white shadow-lg border-b-2 border-primary-500 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">FM</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">FashionMarket</span>
-          </Link>
+          <div className="flex-shrink-0">
+            <Link to="/" className="flex items-center space-x-2">
+              <span className="text-xl font-bold text-gray-900">
+                <span className='text-red-800'>R</span>ello.lk
+              </span>
+            </Link>
+          </div>
 
           {/* Search Bar */}
           <div className="flex-1 max-w-lg mx-8 relative">
@@ -117,16 +118,13 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Right Side Icons */}
-          <div className="flex items-center space-x-4">
-            {/* Country Flag */}
-            <span className="text-xl">{countryFlag}</span>
-
+          {/* Right Side Icons - Always in the corner */}
+          <div className="flex-shrink-0 flex items-center space-x-2">
             {user ? (
               <>
                 {/* Cart (Customer only) */}
                 {user.userType === 'customer' && (
-                  <Link to="/cart" className="relative p-2 text-gray-600 hover:text-primary-500 transition-colors">
+                  <Link to="/cart" className="relative p-2 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all duration-200">
                     <ShoppingCart className="h-6 w-6" />
                     {getCartItemsCount() > 0 && (
                       <span className="absolute -top-1 -right-1 bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -138,33 +136,26 @@ const Navbar = () => {
 
                 {/* Favorites (Customer only) */}
                 {user.userType === 'customer' && (
-                  <Link to="/favorites" className="p-2 text-gray-600 hover:text-primary-500 transition-colors">
+                  <Link to="/favorites" className="p-2 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all duration-200">
                     <Heart className="h-6 w-6" />
                   </Link>
                 )}
 
                 {/* Chat */}
-                <div className="relative p-2 text-gray-600 hover:text-primary-500 transition-colors cursor-pointer">
-                  <MessageCircle className="h-6 w-6" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
+                
 
                 {/* User Menu */}
                 <div className="relative">
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200"
                   >
                     <img 
                       src={user.avatar} 
                       alt={user.name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
-                    <span className="text-sm font-medium text-gray-700">{user.name}</span>
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.name}</span>
                   </button>
 
                   {showDropdown && (
@@ -202,16 +193,17 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-4">
+              /* Login/Signup Section - Enhanced corner positioning */
+              <div className="flex items-center space-x-3 ml-4">
                 <Link
                   to="/login"
-                  className="text-gray-600 hover:text-primary-500 transition-colors"
+                  className="text-gray-600 hover:text-primary-500 font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-gray-100"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
+                  className="bg-primary-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-600 transition-colors duration-200 shadow-sm hover:shadow-md"
                 >
                   Sign Up
                 </Link>

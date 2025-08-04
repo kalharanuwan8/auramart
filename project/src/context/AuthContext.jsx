@@ -24,6 +24,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password, userType) => {
+    // Check for admin credentials
+    if (email === 'admin@auramarket.lk' && password === 'admin123') {
+      const adminData = {
+        id: 'admin_1',
+        email: 'admin@auramarket.lk',
+        userType: 'admin',
+        name: 'Admin User',
+        avatar: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=150'
+      };
+      
+      setUser(adminData);
+      localStorage.setItem('user', JSON.stringify(adminData));
+      return adminData;
+    }
+    
     // Mock authentication
     const userData = {
       id: `${userType}_${Date.now()}`,

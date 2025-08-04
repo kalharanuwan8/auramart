@@ -11,12 +11,12 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">FM</span>
+                <span className="text-white font-bold text-sm">AM</span>
               </div>
-              <span className="text-xl font-bold">FashionMarket</span>
+              <span className="text-xl font-bold">AuraMarket</span>
             </div>
             <p className="text-gray-300 text-sm">
-              Your premier destination for fashion. Connecting buyers and sellers worldwide.
+              Your premier destination for fashion. Connecting buyers and sellers across Sri Lanka.
             </p>
             <div className="flex space-x-4">
               <Facebook className="h-5 w-5 text-gray-400 hover:text-white cursor-pointer transition-colors" />
@@ -53,15 +53,18 @@ const Footer = () => {
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-300">support@fashionmarket.com</span>
+                <span className="text-gray-300">support@auramarket.lk</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-300">+1 (555) 123-4567</span>
+                <span className="text-gray-300">+94 77 123 4567</span>
               </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-300">New York, NY</span>
+                <div className="flex items-center space-x-1">
+                  <span className="text-lg">🇱🇰</span>
+                  <span className="text-gray-300">No. 25, Galle Road, Colombo, Sri Lanka</span>
+                </div>
               </div>
             </div>
           </div>
@@ -69,7 +72,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">
           <p className="text-gray-400 text-sm">
-            © 2024 FashionMarket. All rights reserved.
+            © 2024 AuraMarket. All rights reserved.
           </p>
         </div>
       </div>

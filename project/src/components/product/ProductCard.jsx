@@ -73,7 +73,7 @@ const ProductCard = ({ product }) => {
                 className="w-full bg-white text-gray-900 hover:bg-gray-100"
                 size="sm"
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
+                <ShoppingCart className="h-4 w-4 mr-2 text-red-600" />
                 Add to Cart
               </Button>
             </div>

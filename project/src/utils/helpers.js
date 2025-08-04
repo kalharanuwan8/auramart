@@ -51,7 +51,6 @@ export const debounce = (func, wait) => {
 };
 
 export const getCountryFlag = () => {
-  // Mock geo-IP detection - in real app, use a service like ipapi.co
-  const countries = ['🇺🇸', '🇬🇧', '🇨🇦', '🇦🇺', '🇩🇪', '🇫🇷', '🇯🇵'];
-  return countries[Math.floor(Math.random() * countries.length)];
+  // Mock geo-IP detection for Sri Lanka - in real app, use a service like ipapi.co
+  return '🇱🇰'; // Sri Lankan flag
 };
