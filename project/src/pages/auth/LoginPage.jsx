@@ -1,3 +1,4 @@
+// src/pages/LoginPage.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -15,7 +16,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
-  const { login } = useAuth();
+  const { login, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,13 +31,6 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Admin credentials check
-      if (formData.userType === 'admin') {
-        if (formData.email !== 'admin@fashionmarket.com' || formData.password !== 'admin123') {
-          throw new Error('Invalid admin credentials');
-        }
-      }
-
       await login(formData.email, formData.password, formData.userType);
       
       setToast({
@@ -71,9 +65,41 @@ const LoginPage = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (formData.userType === 'admin') {
+      setToast({
+        show: true,
+        message: 'Google Sign-In is not available for admin accounts',
+        type: 'error'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await googleSignIn(formData.userType);
+      setToast({
+        show: true,
+        message: 'Google Sign-In successful! Redirecting...',
+        type: 'success'
+      });
+
+      setTimeout(() => {
+        navigate(formData.userType === 'seller' ? '/seller/dashboard' : '/');
+      }, 1500);
+    } catch (error) {
+      setToast({
+        show: true,
+        message: error.message || 'Google Sign-In failed. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Add Back Button */}
       <Link
         to="/"
         className="absolute top-4 left-4 p-2 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -96,13 +122,13 @@ const LoginPage = () => {
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* User Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Account Type</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   { value: 'customer', label: 'Customer' },
-                  { value: 'seller', label: 'Seller' }
+                  { value: 'seller', label: 'Seller' },
+                  { value: 'admin', label: 'Admin' }
                 ].map((type) => (
                   <label key={type.value} className="relative">
                     <input
@@ -125,7 +151,6 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <div className="relative">
@@ -142,7 +167,6 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
@@ -166,14 +190,12 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* Admin Credentials Note */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
                 <strong>Admin Access:</strong> Use admin@auramarket.lk / admin123 to access admin dashboard
               </p>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
@@ -183,29 +205,34 @@ const LoginPage = () => {
               Sign In
             </Button>
 
-            {/* Google Sign In (Customer & Seller only) */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-              </div>
-            </div>
+            {formData.userType !== 'admin' && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  </div>
+                </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              size="lg"
-            >
-              <img 
-                src="https://developers.google.com/identity/images/g-logo.png" 
-                alt="Google" 
-                className="w-5 h-5 mr-2"
-              />
-              Sign in with Google
-            </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleGoogleSignIn}
+                  loading={loading}
+                >
+                  <img 
+                    src="https://developers.google.com/identity/images/g-logo.png" 
+                    alt="Google" 
+                    className="w-5 h-5 mr-2"
+                  />
+                  Sign in with Google
+                </Button>
+              </>
+            )}
           </form>
 
           <div className="mt-6 text-center">

@@ -1,3 +1,4 @@
+// src/pages/SignupPage.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowLeft } from 'lucide-react';
@@ -21,7 +22,7 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
-  const { signup } = useAuth();
+  const { signup, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -38,6 +39,15 @@ const SignupPage = () => {
       setToast({
         show: true,
         message: 'Passwords do not match',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (formData.userType === 'admin') {
+      setToast({
+        show: true,
+        message: 'Admin accounts cannot be created through signup',
         type: 'error'
       });
       return;
@@ -87,9 +97,41 @@ const SignupPage = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (formData.userType === 'admin') {
+      setToast({
+        show: true,
+        message: 'Google Sign-In is not available for admin accounts',
+        type: 'error'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await googleSignIn(formData.userType);
+      setToast({
+        show: true,
+        message: 'Google Sign-In successful! Redirecting...',
+        type: 'success'
+      });
+
+      setTimeout(() => {
+        navigate(formData.userType === 'seller' ? '/seller/dashboard' : '/');
+      }, 1500);
+    } catch (error) {
+      setToast({
+        show: true,
+        message: error.message || 'Google Sign-In failed. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Add Back Button */}
       <Link
         to="/"
         className="absolute top-4 left-4 p-2 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -112,7 +154,6 @@ const SignupPage = () => {
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* User Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Account Type</label>
               <div className="grid grid-cols-2 gap-3">
@@ -141,7 +182,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Name Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {formData.userType === 'seller' ? 'Full Name' : 'Name'}
@@ -160,7 +200,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <div className="relative">
@@ -177,7 +216,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Phone Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
               <div className="relative">
@@ -193,7 +231,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Seller-specific fields */}
             {formData.userType === 'seller' && (
               <>
                 <div>
@@ -223,7 +260,6 @@ const SignupPage = () => {
               </>
             )}
 
-            {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
@@ -247,7 +283,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Confirm Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
               <div className="relative">
@@ -271,7 +306,6 @@ const SignupPage = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
@@ -281,31 +315,30 @@ const SignupPage = () => {
               Create Account
             </Button>
 
-            {/* Google Sign Up (Customer & Seller only) */}
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
               </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                size="lg"
-              >
-                <img 
-                  src="https://developers.google.com/identity/images/g-logo.png" 
-                  alt="Google" 
-                  className="w-5 h-5 mr-2"
-                />
-                Sign up with Google
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={handleGoogleSignIn}
+              loading={loading}
+            >
+              <img 
+                src="https://developers.google.com/identity/images/g-logo.png" 
+                alt="Google" 
+                className="w-5 h-5 mr-2"
+              />
+              Sign up with Google
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
