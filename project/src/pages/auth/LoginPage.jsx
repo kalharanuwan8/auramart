@@ -1,4 +1,3 @@
-// src/pages/LoginPage.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -187,6 +186,14 @@ const LoginPage = () => {
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
+              </div>
+              <div className="text-right mt-2">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary-500 hover:text-primary-600 font-medium"
+                >
+                  Forgot Password?
+                </Link>
               </div>
             </div>
 

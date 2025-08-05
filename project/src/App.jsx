@@ -14,6 +14,7 @@ import FavoritesPage from './pages/FavoritesPage';
 import OrdersPage from './pages/OrdersPage';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedUserTypes = [] }) => {
@@ -109,7 +110,10 @@ function App() {
                     <AdminDashboard />
                   </AdminRoute>
                 } />
+                {/* forgot pass*/}
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+                {/* Authenticated Routes */}
                 {/* 404 Route */}
                 <Route path="*" element={
                   <div className="min-h-screen flex items-center justify-center bg-gray-50">

@@ -6,19 +6,29 @@ import Button from '../../components/common/Button';
 import Toast from '../../components/common/Toast';
 
 const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({ email: '' });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await resetPassword(email);
+      if (formData.email === 'admin@auramarket.lk') {
+        throw new Error('Password reset is not available for admin accounts');
+      }
+      await resetPassword(formData.email);
       
       setToast({
         show: true,
@@ -64,15 +74,15 @@ const ForgotPasswordPage = () => {
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   required
                   className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Enter your email"
@@ -80,7 +90,6 @@ const ForgotPasswordPage = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
