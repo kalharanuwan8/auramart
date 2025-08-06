@@ -1,15 +1,16 @@
-// src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  signOut 
+import { auth, googleProvider, db } from '../firebase/firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  sendPasswordResetEmail,
+  sendEmailVerification
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -21,170 +22,187 @@ export const useAuth = () => {
   return context;
 };
 
+// ✅ Determine user role
+const determineUserRole = (email, userData = null) => {
+  if (email === 'admin@auramarket.lk' || email?.toLowerCase().includes('admin@')) {
+    return 'admin';
+  }
+  return userData?.role || userData?.userType || 'customer';
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Fetch additional user data from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const userData = userDoc.exists() ? userDoc.data() : {};
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Try fetching user data from Firestore
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
 
-        const combinedUserData = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName || userData.name || firebaseUser.email.split('@')[0],
-          userType: userData.userType || 'customer',
-          avatar: firebaseUser.photoURL || userData.avatar || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=150',
-          ...userData
+        let userRole = determineUserRole(user.email);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          userRole = userData.role || userData.userType || userRole;
+        }
+
+        const formattedUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || 'User',
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+          role: userRole
         };
-        setUser(combinedUserData);
-        localStorage.setItem('user', JSON.stringify(combinedUserData));
+
+        setCurrentUser(formattedUser);
+        localStorage.setItem('user', JSON.stringify(formattedUser));
       } else {
-        setUser(null);
+        setCurrentUser(null);
         localStorage.removeItem('user');
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
-  const login = async (email, password, userType) => {
-    try {
-      // Admin credentials check
-      if (userType === 'admin') {
-        if (email !== 'admin@auramarket.lk' || password !== 'admin123') {
-          throw new Error('Invalid admin credentials');
-        }
-      }
+  // ✅ Email login
+  const login = async (email, password) => {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
 
-      // Fetch user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      const userData = userDoc.exists() ? userDoc.data() : {};
-
-      // Ensure userType matches
-      if (userData.userType && userData.userType !== userType) {
-        throw new Error('Invalid user type for this account');
-      }
-
-      const combinedUserData = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: firebaseUser.displayName || userData.name || firebaseUser.email.split('@')[0],
-        userType: userType,
-        avatar: firebaseUser.photoURL || userData.avatar || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=150',
-        ...userData
-      };
-
-      setUser(combinedUserData);
-      localStorage.setItem('user', JSON.stringify(combinedUserData));
-      return combinedUserData;
-    } catch (error) {
-      throw new Error(error.message);
+    let userRole = determineUserRole(email);
+    if (userSnap.exists()) {
+      userRole = userSnap.data().role || userSnap.data().userType || userRole;
     }
+
+    const formattedUser = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || 'User',
+      photoURL: user.photoURL,
+      emailVerified: user.emailVerified,
+      role: userRole
+    };
+
+    setCurrentUser(formattedUser);
+    localStorage.setItem('user', JSON.stringify(formattedUser));
+    return formattedUser;
   };
 
-  const signup = async (email, password, userType, additionalData = {}) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
+  // ✅ Email signup
+  const signup = async (email, password, role = 'customer', additionalData = {}) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-      const userData = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        userType,
-        name: additionalData.name || firebaseUser.email.split('@')[0],
-        avatar: firebaseUser.photoURL || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=150',
-        phone: additionalData.phone || '',
-        ...(userType === 'seller' && {
-          storeName: additionalData.storeName || '',
-          storeDescription: additionalData.storeDescription || ''
-        })
-      };
-
-      // Store user data in Firestore
-      await setDoc(doc(db, 'users', firebaseUser.uid), userData);
-
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
-    } catch (error) {
-      throw new Error(error.message);
+    if (additionalData.name) {
+      await updateProfile(user, { displayName: additionalData.name });
     }
+
+    const finalRole = determineUserRole(email, { role });
+
+    // Save user in Firestore
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      email,
+      role: finalRole,
+      displayName: additionalData.name || 'User',
+      createdAt: new Date()
+    });
+
+    const userData = {
+      uid: user.uid,
+      email,
+      role: finalRole,
+      displayName: additionalData.name || 'User'
+    };
+
+    setCurrentUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+    return userData;
   };
 
-  const googleSignIn = async (userType) => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
+  // ✅ Google Sign-In
+  const googleSignIn = async (defaultRole = 'customer') => {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
 
-      // Check if user already exists in Firestore
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      let userData;
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
 
-      if (!userDoc.exists()) {
-        // New user, create Firestore entry
-        userData = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email,
-          userType,
-          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          avatar: firebaseUser.photoURL || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=150',
-          phone: ''
-        };
-        await setDoc(doc(db, 'users', firebaseUser.uid), userData);
-      } else {
-        userData = userDoc.data();
-        // Ensure userType matches
-        if (userData.userType !== userType) {
-          throw new Error('This Google account is registered as a different user type');
-        }
-      }
-
-      const combinedUserData = {
-        ...userData,
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: firebaseUser.displayName || userData.name,
-        avatar: firebaseUser.photoURL || userData.avatar
-      };
-
-      setUser(combinedUserData);
-      localStorage.setItem('user', JSON.stringify(combinedUserData));
-      return combinedUserData;
-    } catch (error) {
-      throw new Error(error.message);
+    let userRole = determineUserRole(user.email, { role: defaultRole });
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName,
+        role: userRole,
+        photoURL: user.photoURL,
+        createdAt: new Date()
+      });
+    } else {
+      userRole = userSnap.data().role || userRole;
     }
+
+    const formattedUser = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || 'User',
+      photoURL: user.photoURL,
+      emailVerified: user.emailVerified,
+      role: userRole
+    };
+
+    setCurrentUser(formattedUser);
+    localStorage.setItem('user', JSON.stringify(formattedUser));
+    return formattedUser;
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      localStorage.removeItem('user');
-    } catch (error) {
-      throw new Error(error.message);
-    }
+    await signOut(auth);
+    setCurrentUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
   };
 
   const value = {
-    user,
-    login,
+    currentUser,
     signup,
+    login,
     googleSignIn,
     logout,
+    sendEmailVerification,
+    resetPassword,
     loading
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
+
+function getFirebaseErrorMessage(code) {
+  switch (code) {
+    case 'auth/email-already-in-use': return 'Email already in use.';
+    case 'auth/invalid-email': return 'Invalid email address.';
+    case 'auth/weak-password': return 'Password should be at least 6 characters.';
+    case 'auth/user-not-found': return 'No user found with this email.';
+    case 'auth/wrong-password': return 'Incorrect password.';
+    case 'auth/too-many-requests': return 'Too many attempts. Please try later.';
+    case 'auth/popup-closed-by-user': return 'Sign in was cancelled.';
+    case 'auth/account-exists-with-different-credential': return 'Account exists with a different sign-in method.';
+    default: return 'An error occurred. Please try again.';
+  }
+}

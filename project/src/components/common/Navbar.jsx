@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, MessageCircle, LogOut, Settings, Package } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, LogOut, Package } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useChat } from '../../context/ChatContext';
@@ -8,7 +8,7 @@ import { getCountryFlag, debounce } from '../../utils/helpers';
 import { products } from '../../data/products';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { currentUser: user, logout } = useAuth();
   const { getCartItemsCount } = useCart();
   const { unreadCount } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +52,7 @@ const Navbar = () => {
   };
 
   const getDashboardLink = () => {
-    switch (user?.userType) {
+    switch (user?.role) {
       case 'customer':
         return '/customer/dashboard';
       case 'seller':
@@ -66,7 +66,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white shadow-lg border-b-2 border-primary-500 sticky top-0 z-50">
-      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
@@ -89,7 +89,7 @@ const Navbar = () => {
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </form>
-            
+
             {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50">
@@ -103,8 +103,8 @@ const Navbar = () => {
                       setSearchQuery('');
                     }}
                   >
-                    <img 
-                      src={product.image} 
+                    <img
+                      src={product.image}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded"
                     />
@@ -118,12 +118,12 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Right Side Icons - Always in the corner */}
+          {/* Right Side Icons */}
           <div className="flex-shrink-0 flex items-center space-x-2">
             {user ? (
               <>
                 {/* Cart (Customer only) */}
-                {user.userType === 'customer' && (
+                {user.role === 'customer' && (
                   <Link to="/cart" className="relative p-2 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all duration-200">
                     <ShoppingCart className="h-6 w-6" />
                     {getCartItemsCount() > 0 && (
@@ -135,14 +135,11 @@ const Navbar = () => {
                 )}
 
                 {/* Favorites (Customer only) */}
-                {user.userType === 'customer' && (
+                {user.role === 'customer' && (
                   <Link to="/favorites" className="p-2 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all duration-200">
                     <Heart className="h-6 w-6" />
                   </Link>
                 )}
-
-                {/* Chat */}
-                
 
                 {/* User Menu */}
                 <div className="relative">
@@ -150,26 +147,31 @@ const Navbar = () => {
                     onClick={() => setShowDropdown(!showDropdown)}
                     className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200"
                   >
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name}
+                    <img
+                      src={user?.photoURL || 'https://via.placeholder.com/40'}
+                      alt={user?.displayName || 'User'}
                       className="w-8 h-8 rounded-full object-cover"
                     />
-                    <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.name}</span>
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                      {user?.displayName}
+                    </span>
                   </button>
 
                   {showDropdown && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                      <Link
-                        to={getDashboardLink()}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowDropdown(false)}
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        Dashboard
-                      </Link>
-                      
-                      {user.userType === 'customer' && (
+                      {/* ✅ Show Dashboard only for seller & admin */}
+                      {user.role !== 'customer' && (
+                        <Link
+                          to={getDashboardLink()}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowDropdown(false)}
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      )}
+
+                      {user.role === 'customer' && (
                         <Link
                           to="/orders"
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -179,7 +181,7 @@ const Navbar = () => {
                           Orders
                         </Link>
                       )}
-                      
+
                       <div className="border-t border-gray-200 my-2"></div>
                       <button
                         onClick={handleLogout}
@@ -193,7 +195,7 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              /* Login/Signup Section - Enhanced corner positioning */
+              /* Login/Signup Section */
               <div className="flex items-center space-x-3 ml-4">
                 <Link
                   to="/login"

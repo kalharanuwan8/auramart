@@ -1,3 +1,4 @@
+// src/pages/auth/LoginPage.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -14,7 +15,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  
+
   const { login, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
@@ -30,33 +31,31 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password, formData.userType);
-      
+      const loggedInUser = await login(formData.email, formData.password);
+
       setToast({
         show: true,
-        message: 'Login successful! Redirecting...',
+        message: 'Login successful!',
         type: 'success'
       });
 
-      setTimeout(() => {
-        switch (formData.userType) {
-          case 'customer':
-            navigate('/');
-            break;
-          case 'seller':
-            navigate('/seller/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
-      }, 1500);
+      let redirectPath;
+      switch (loggedInUser.role) {
+        case 'admin':
+          redirectPath = '/admin/dashboard';
+          break;
+        case 'seller':
+          redirectPath = '/seller/dashboard';
+          break;
+        default:
+          redirectPath = '/';
+      }
+
+      setTimeout(() => navigate(redirectPath), 1000);
     } catch (error) {
       setToast({
         show: true,
-        message: error.message || 'Login failed. Please try again.',
+        message: error.message,
         type: 'error'
       });
     } finally {
@@ -65,7 +64,7 @@ const LoginPage = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (formData.userType === 'admin') {
+    if (formData.email === 'admin@auramarket.lk') {
       setToast({
         show: true,
         message: 'Google Sign-In is not available for admin accounts',
@@ -79,17 +78,16 @@ const LoginPage = () => {
       await googleSignIn(formData.userType);
       setToast({
         show: true,
-        message: 'Google Sign-In successful! Redirecting...',
+        message: 'Signed in with Google!',
         type: 'success'
       });
-
       setTimeout(() => {
         navigate(formData.userType === 'seller' ? '/seller/dashboard' : '/');
       }, 1500);
     } catch (error) {
       setToast({
         show: true,
-        message: error.message || 'Google Sign-In failed. Please try again.',
+        message: error.message,
         type: 'error'
       });
     } finally {
@@ -123,11 +121,10 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Account Type</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { value: 'customer', label: 'Customer' },
-                  { value: 'seller', label: 'Seller' },
-                  { value: 'admin', label: 'Admin' }
+                  { value: 'seller', label: 'Seller' }
                 ].map((type) => (
                   <label key={type.value} className="relative">
                     <input
@@ -160,7 +157,7 @@ const LoginPage = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter your email"
                 />
               </div>
@@ -176,7 +173,7 @@ const LoginPage = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter your password"
                 />
                 <button
@@ -188,19 +185,10 @@ const LoginPage = () => {
                 </button>
               </div>
               <div className="text-right mt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary-500 hover:text-primary-600 font-medium"
-                >
+                <Link to="/forgot-password" className="text-sm text-primary-500 hover:text-primary-600 font-medium">
                   Forgot Password?
                 </Link>
               </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                <strong>Admin Access:</strong> Use admin@auramarket.lk / admin123 to access admin dashboard
-              </p>
             </div>
 
             <Button
@@ -212,34 +200,30 @@ const LoginPage = () => {
               Sign In
             </Button>
 
-            {formData.userType !== 'admin' && (
-              <>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                  </div>
-                </div>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                  onClick={handleGoogleSignIn}
-                  loading={loading}
-                >
-                  <img 
-                    src="https://developers.google.com/identity/images/g-logo.png" 
-                    alt="Google" 
-                    className="w-5 h-5 mr-2"
-                  />
-                  Sign in with Google
-                </Button>
-              </>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={handleGoogleSignIn}
+              loading={loading}
+            >
+              <img
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-5 h-5 mr-2"
+              />
+              Sign in with Google
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
