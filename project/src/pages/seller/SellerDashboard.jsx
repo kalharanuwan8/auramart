@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, DollarSign, TrendingUp, MessageCircle, Edit, Trash2 } from 'lucide-react';
+import {
+  Plus, Package, DollarSign, TrendingUp, MessageCircle,
+  Edit, Trash2
+} from 'lucide-react';
 import Layout from '../../components/common/Layout';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
@@ -7,6 +10,14 @@ import Toast from '../../components/common/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { products, categories } from '../../data/products';
 import { formatPrice } from '../../utils/helpers';
+
+// Firebase imports
+import { storage } from '../../firebase/firebase';
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL
+} from "firebase/storage";
 
 const SellerDashboard = () => {
   const { user } = useAuth();
@@ -22,32 +33,117 @@ const SellerDashboard = () => {
     stock: '',
     sizes: [],
     colors: [],
-    image: ''
+    images: [],
+    displayImageIndex: 0
   });
+  const [uploading, setUploading] = useState(false);
+  const [localFiles, setLocalFiles] = useState([]);
 
   useEffect(() => {
-    // Filter products by current seller
     const userProducts = products.filter(product => product.sellerId === user?.id);
     setSellerProducts(userProducts);
   }, [user]);
 
-  const handleAddProduct = (e) => {
+  // Handle file selection (limit 3)
+  const handleFileChange = (e) => {
+    let files = Array.from(e.target.files).slice(0, 3);
+    setLocalFiles(files);
+    setNewProduct(prev => ({ ...prev, displayImageIndex: 0 }));
+  };
+
+  // Upload images to Firebase and return URLs
+  const uploadImages = async (files) => {
+    setUploading(true);
+    try {
+      const uploadPromises = files.map((file) => {
+        const storageRef = ref(storage, `products/${user.id}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        return new Promise((resolve, reject) => {
+          uploadTask.on('state_changed',
+            () => {},
+            (error) => reject(error),
+            () => {
+              getDownloadURL(uploadTask.snapshot.ref).then(resolve);
+            }
+          );
+        });
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      setUploading(false);
+      return urls;
+    } catch (error) {
+      setUploading(false);
+      setToast({
+        show: true,
+        message: `Image upload failed: ${error.message}`,
+        type: 'error'
+      });
+      return [];
+    }
+  };
+
+  // ✅ FIXED: Add or Update Product
+  const handleAddProduct = async (e) => {
     e.preventDefault();
-    
+
+    // Validate image presence
+    if (!editingProduct && localFiles.length === 0) {
+      setToast({ show: true, message: "Please upload at least one image.", type: 'error' });
+      return;
+    }
+
+    // Upload images if selected
+    let uploadedUrls = [];
+    if (localFiles.length > 0) {
+      uploadedUrls = await uploadImages(localFiles);
+    }
+
+    let finalImages = [];
+    if (editingProduct) {
+      if (localFiles.length > 0) {
+        // Merge old + new
+        finalImages = [...(newProduct.images || []), ...uploadedUrls];
+      } else {
+        // Keep existing
+        finalImages = newProduct.images || [];
+      }
+    } else {
+      finalImages = uploadedUrls;
+    }
+
+    if (finalImages.length === 0) {
+      setToast({ show: true, message: "At least one image URL is required.", type: 'error' });
+      return;
+    }
+
+    // Build product object
     const product = {
-      id: Date.now(),
+      id: editingProduct ? editingProduct.id : Date.now(),
       ...newProduct,
       price: parseFloat(newProduct.price),
       stock: parseInt(newProduct.stock),
       seller: user.storeName || user.name,
       sellerId: user.id,
-      sales: 0,
-      rating: 0,
-      reviews: 0,
-      image: newProduct.image || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=800'
+      sales: editingProduct ? editingProduct.sales : 0,
+      rating: editingProduct ? editingProduct.rating : 0,
+      reviews: editingProduct ? editingProduct.reviews : 0,
+      images: finalImages,
+      displayImageIndex: newProduct.displayImageIndex || 0
     };
 
-    setSellerProducts([...sellerProducts, product]);
+    // Update or Add
+    let updatedProducts;
+    if (editingProduct) {
+      updatedProducts = sellerProducts.map(p => p.id === product.id ? product : p);
+    } else {
+      updatedProducts = [...sellerProducts, product];
+    }
+
+    setSellerProducts(updatedProducts);
+
+    // Reset form
     setNewProduct({
       name: '',
       category: '',
@@ -56,13 +152,16 @@ const SellerDashboard = () => {
       stock: '',
       sizes: [],
       colors: [],
-      image: ''
+      images: [],
+      displayImageIndex: 0
     });
+    setLocalFiles([]);
+    setEditingProduct(null);
     setShowAddModal(false);
-    
+
     setToast({
       show: true,
-      message: 'Product added successfully!',
+      message: editingProduct ? 'Product updated successfully!' : 'Product added successfully!',
       type: 'success'
     });
   };
@@ -76,13 +175,20 @@ const SellerDashboard = () => {
     });
   };
 
-  const totalRevenue = sellerProducts.reduce((total, product) => 
+  const totalRevenue = sellerProducts.reduce((total, product) =>
     total + (product.price * product.sales), 0
   );
 
-  const totalSales = sellerProducts.reduce((total, product) => 
+  const totalSales = sellerProducts.reduce((total, product) =>
     total + product.sales, 0
   );
+
+  useEffect(() => {
+    if (editingProduct) {
+      setNewProduct(editingProduct);
+      setLocalFiles([]);
+    }
+  }, [editingProduct]);
 
   return (
     <Layout>
@@ -95,7 +201,7 @@ const SellerDashboard = () => {
           </div>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Product
+            {editingProduct ? "Edit Product" : "Add Product"}
           </Button>
         </div>
 
@@ -155,7 +261,7 @@ const SellerDashboard = () => {
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">My Products</h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -186,7 +292,7 @@ const SellerDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <img
-                          src={product.image}
+                          src={product.images?.[product.displayImageIndex] || product.images?.[0] || 'https://via.placeholder.com/40'}
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded-lg"
                         />
@@ -214,6 +320,7 @@ const SellerDashboard = () => {
                             setEditingProduct(product);
                             setNewProduct(product);
                             setShowAddModal(true);
+                            setLocalFiles([]);
                           }}
                           className="text-primary-600 hover:text-primary-900"
                         >
@@ -249,8 +356,10 @@ const SellerDashboard = () => {
             stock: '',
             sizes: [],
             colors: [],
-            image: ''
+            images: [],
+            displayImageIndex: 0
           });
+          setLocalFiles([]);
         }}
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
         size="lg"
@@ -319,28 +428,63 @@ const SellerDashboard = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Images (1-3)</label>
             <input
-              type="url"
-              value={newProduct.image}
-              onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="https://example.com/image.jpg"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              className="w-full"
+              disabled={uploading}
             />
+            <p className="text-xs text-gray-500 mt-1">You can upload up to 3 images.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Image previews */}
+          <div className="flex space-x-4 mt-4 overflow-x-auto">
+            {localFiles.length > 0 && localFiles.map((file, index) => {
+              const previewURL = URL.createObjectURL(file);
+              return (
+                <div key={index} className="relative">
+                  <img src={previewURL} alt={`preview-${index}`} className="w-20 h-20 object-cover rounded" />
+                  <input
+                    type="radio"
+                    name="displayImage"
+                    checked={newProduct.displayImageIndex === index}
+                    onChange={() => setNewProduct({ ...newProduct, displayImageIndex: index })}
+                    className="absolute top-1 left-1"
+                  />
+                  <span className="absolute top-1 left-7 bg-white text-xs px-1 rounded">Display</span>
+                </div>
+              );
+            })}
+
+            {localFiles.length === 0 && editingProduct && newProduct.images?.map((url, index) => (
+              <div key={index} className="relative">
+                <img src={url} alt={`existing-${index}`} className="w-20 h-20 object-cover rounded" />
+                <input
+                  type="radio"
+                  name="displayImage"
+                  checked={newProduct.displayImageIndex === index}
+                  onChange={() => setNewProduct({ ...newProduct, displayImageIndex: index })}
+                  className="absolute top-1 left-1"
+                />
+                <span className="absolute top-1 left-7 bg-white text-xs px-1 rounded">Display</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Sizes (comma separated)</label>
               <input
                 type="text"
                 value={Array.isArray(newProduct.sizes) ? newProduct.sizes.join(', ') : ''}
-                onChange={(e) => setNewProduct({ 
-                  ...newProduct, 
-                  sizes: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
+                onChange={(e) => setNewProduct({
+                  ...newProduct,
+                  sizes: e.target.value.split(',').map(s => s.trim())
                 })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="S, M, L, XL"
               />
             </div>
 
@@ -349,12 +493,11 @@ const SellerDashboard = () => {
               <input
                 type="text"
                 value={Array.isArray(newProduct.colors) ? newProduct.colors.join(', ') : ''}
-                onChange={(e) => setNewProduct({ 
-                  ...newProduct, 
-                  colors: e.target.value.split(',').map(c => c.trim()).filter(c => c) 
+                onChange={(e) => setNewProduct({
+                  ...newProduct,
+                  colors: e.target.value.split(',').map(c => c.trim())
                 })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="Red, Blue, White"
               />
             </div>
           </div>
@@ -362,22 +505,44 @@ const SellerDashboard = () => {
           <div className="flex justify-end space-x-3 pt-4">
             <Button
               type="button"
-              variant="outline"
-              onClick={() => setShowAddModal(false)}
+              variant="secondary"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingProduct(null);
+                setNewProduct({
+                  name: '',
+                  category: '',
+                  price: '',
+                  description: '',
+                  stock: '',
+                  sizes: [],
+                  colors: [],
+                  images: [],
+                  displayImageIndex: 0
+                });
+                setLocalFiles([]);
+              }}
             >
               Cancel
             </Button>
-            <Button type="submit">
-              {editingProduct ? 'Update Product' : 'Add Product'}
+            <Button
+              type="submit"
+              disabled={uploading}
+            >
+              {uploading
+                ? 'Uploading...'
+                : editingProduct
+                  ? 'Update Product'
+                  : 'Add Product'}
             </Button>
           </div>
         </form>
       </Modal>
 
       <Toast
-        type={toast.type}
+        show={toast.show}
         message={toast.message}
-        isVisible={toast.show}
+        type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
     </Layout>
