@@ -46,40 +46,82 @@ const SellerDashboard = () => {
 
   // Handle file selection (limit 3)
   const handleFileChange = (e) => {
-    let files = Array.from(e.target.files).slice(0, 3);
-    setLocalFiles(files);
+    const selectedFiles = Array.from(e.target.files);
+    
+    // Validate number of files
+    if (selectedFiles.length > 3) {
+      setToast({
+        show: true,
+        message: 'Maximum 3 images allowed',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Basic validation before setting files
+    const invalidFiles = selectedFiles.filter(
+      file => !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      setToast({
+        show: true,
+        message: 'Some files are invalid. Please ensure all files are images under 5MB',
+        type: 'error'
+      });
+      return;
+    }
+
+    setLocalFiles(selectedFiles);
     setNewProduct(prev => ({ ...prev, displayImageIndex: 0 }));
   };
 
   // Upload images to Firebase and return URLs
   const uploadImages = async (files) => {
     setUploading(true);
+    const uploadedUrls = [];
+    
     try {
-      const uploadPromises = files.map((file) => {
-        const storageRef = ref(storage, `products/${user.id}/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+      for (const file of files) {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large. Maximum size is 5MB`);
+        }
 
-        return new Promise((resolve, reject) => {
-          uploadTask.on('state_changed',
-            () => {},
-            (error) => reject(error),
-            () => {
-              getDownloadURL(uploadTask.snapshot.ref).then(resolve);
-            }
-          );
-        });
-      });
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`File ${file.name} is not an image`);
+        }
 
-      const urls = await Promise.all(uploadPromises);
+        const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const storageRef = ref(storage, `products/${user.id}/${filename}`);
+        
+        try {
+          // Upload file
+          const uploadTask = await uploadBytesResumable(storageRef, file);
+          console.log(`Upload progress for ${file.name}: ${uploadTask.bytesTransferred} bytes`);
+          
+          // Get download URL
+          const url = await getDownloadURL(uploadTask.ref);
+          console.log(`Successfully uploaded ${file.name}: ${url}`);
+          uploadedUrls.push(url);
+        } catch (uploadError) {
+          console.error(`Error uploading ${file.name}:`, uploadError);
+          throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        }
+      }
+
       setUploading(false);
-      return urls;
+      return uploadedUrls;
+      
     } catch (error) {
       setUploading(false);
       setToast({
         show: true,
-        message: `Image upload failed: ${error.message}`,
+        message: error.message,
         type: 'error'
       });
+      console.error('Upload error:', error);
       return [];
     }
   };
