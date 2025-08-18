@@ -2,9 +2,27 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Toast from '../../components/common/Toast';
+
+// Dummy user data for testing
+const DUMMY_USERS = {
+  'admin@auramarket.lk': {
+    password: 'admin123',
+    role: 'admin',
+    name: 'Admin User'
+  },
+  'seller@example.com': {
+    password: 'seller123',
+    role: 'seller',
+    name: 'Test Seller'
+  },
+  'customer@example.com': {
+    password: 'customer123',
+    role: 'customer',
+    name: 'Test Customer'
+  }
+};
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -16,7 +34,6 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  const { login, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,8 +47,26 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
-      const loggedInUser = await login(formData.email, formData.password);
+      const user = DUMMY_USERS[formData.email];
+      
+      if (!user || user.password !== formData.password) {
+        throw new Error('Invalid email or password');
+      }
+
+      if (user.role !== formData.userType) {
+        throw new Error(`This account is registered as a ${user.role}`);
+      }
+
+      // Store user in localStorage to persist login
+      localStorage.setItem('user', JSON.stringify({
+        email: formData.email,
+        role: user.role,
+        name: user.name
+      }));
 
       setToast({
         show: true,
@@ -39,16 +74,14 @@ const LoginPage = () => {
         type: 'success'
       });
 
-      let redirectPath;
-      switch (loggedInUser.role) {
+      let redirectPath = '/';
+      switch (user.role) {
         case 'admin':
           redirectPath = '/admin/dashboard';
           break;
         case 'seller':
           redirectPath = '/seller/dashboard';
           break;
-        default:
-          redirectPath = '/';
       }
 
       setTimeout(() => navigate(redirectPath), 1000);
@@ -64,23 +97,27 @@ const LoginPage = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (formData.email === 'admin@auramarket.lk') {
-      setToast({
-        show: true,
-        message: 'Google Sign-In is not available for admin accounts',
-        type: 'error'
-      });
-      return;
-    }
-
     setLoading(true);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
-      await googleSignIn(formData.userType);
+      // Create dummy Google user
+      const googleUser = {
+        email: 'google.user@example.com',
+        role: formData.userType,
+        name: 'Google User'
+      };
+
+      localStorage.setItem('user', JSON.stringify(googleUser));
+
       setToast({
         show: true,
         message: 'Signed in with Google!',
         type: 'success'
       });
+
       setTimeout(() => {
         navigate(formData.userType === 'seller' ? '/seller/dashboard' : '/');
       }, 1500);

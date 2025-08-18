@@ -1,16 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, googleProvider, db } from '../firebase/firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail,
-  sendEmailVerification
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -22,157 +10,116 @@ export const useAuth = () => {
   return context;
 };
 
-// ✅ Determine user role
-const determineUserRole = (email, userData = null) => {
+// Dummy user data
+const DUMMY_USERS = {
+  'admin@auramarket.lk': {
+    uid: 'admin123',
+    email: 'admin@auramarket.lk',
+    displayName: 'Admin User',
+    photoURL: 'https://example.com/admin-avatar.png',
+    emailVerified: true,
+    role: 'admin'
+  },
+  'user@example.com': {
+    uid: 'user123',
+    email: 'user@example.com',
+    displayName: 'Test User',
+    photoURL: 'https://example.com/user-avatar.png',
+    emailVerified: true,
+    role: 'customer'
+  }
+};
+
+const determineUserRole = (email) => {
   if (email === 'admin@auramarket.lk' || email?.toLowerCase().includes('admin@')) {
     return 'admin';
   }
-  return userData?.role || userData?.userType || 'customer';
+  return 'customer';
 };
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Try fetching user data from Firestore
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-
-        let userRole = determineUserRole(user.email);
-
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          userRole = userData.role || userData.userType || userRole;
-        }
-
-        const formattedUser = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || 'User',
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-          role: userRole
-        };
-
-        setCurrentUser(formattedUser);
-        localStorage.setItem('user', JSON.stringify(formattedUser));
-      } else {
-        setCurrentUser(null);
-        localStorage.removeItem('user');
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
+    // Simulate auth state check
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
   }, []);
 
-  // ✅ Email login
   const login = async (email, password) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-
-    let userRole = determineUserRole(email);
-    if (userSnap.exists()) {
-      userRole = userSnap.data().role || userSnap.data().userType || userRole;
+    // Simulate login delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const user = DUMMY_USERS[email];
+    if (!user || password !== 'password123') {
+      throw new Error('auth/wrong-password');
     }
 
-    const formattedUser = {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName || 'User',
-      photoURL: user.photoURL,
-      emailVerified: user.emailVerified,
-      role: userRole
-    };
-
-    setCurrentUser(formattedUser);
-    localStorage.setItem('user', JSON.stringify(formattedUser));
-    return formattedUser;
+    setCurrentUser(user);
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
   };
 
-  // ✅ Email signup
   const signup = async (email, password, role = 'customer', additionalData = {}) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    // Simulate signup delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (additionalData.name) {
-      await updateProfile(user, { displayName: additionalData.name });
+    if (DUMMY_USERS[email]) {
+      throw new Error('auth/email-already-in-use');
     }
 
-    const finalRole = determineUserRole(email, { role });
-
-    // Save user in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      uid: user.uid,
+    const newUser = {
+      uid: `user_${Math.random().toString(36).substr(2, 9)}`,
       email,
-      role: finalRole,
       displayName: additionalData.name || 'User',
-      createdAt: new Date()
-    });
-
-    const userData = {
-      uid: user.uid,
-      email,
-      role: finalRole,
-      displayName: additionalData.name || 'User'
+      photoURL: null,
+      emailVerified: false,
+      role: determineUserRole(email)
     };
 
-    setCurrentUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    return userData;
+    DUMMY_USERS[email] = newUser;
+    setCurrentUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    return newUser;
   };
 
-  // ✅ Google Sign-In
-  const googleSignIn = async (defaultRole = 'customer') => {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-
-    let userRole = determineUserRole(user.email, { role: defaultRole });
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        name: user.displayName,
-        role: userRole,
-        photoURL: user.photoURL,
-        createdAt: new Date()
-      });
-    } else {
-      userRole = userSnap.data().role || userRole;
-    }
-
-    const formattedUser = {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName || 'User',
-      photoURL: user.photoURL,
-      emailVerified: user.emailVerified,
-      role: userRole
+  const googleSignIn = async () => {
+    // Simulate Google sign-in delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const googleUser = {
+      uid: 'google_user123',
+      email: 'google@example.com',
+      displayName: 'Google User',
+      photoURL: 'https://example.com/google-avatar.png',
+      emailVerified: true,
+      role: 'customer'
     };
 
-    setCurrentUser(formattedUser);
-    localStorage.setItem('user', JSON.stringify(formattedUser));
-    return formattedUser;
+    setCurrentUser(googleUser);
+    localStorage.setItem('user', JSON.stringify(googleUser));
+    return googleUser;
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // Simulate logout delay
+    await new Promise(resolve => setTimeout(resolve, 500));
     setCurrentUser(null);
     localStorage.removeItem('user');
   };
 
   const resetPassword = async (email) => {
-    await sendPasswordResetEmail(auth, email);
+    // Simulate password reset delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!DUMMY_USERS[email]) {
+      throw new Error('auth/user-not-found');
+    }
+    // In a real app, this would send an email
+    return true;
   };
 
   const value = {
@@ -181,7 +128,6 @@ export const AuthProvider = ({ children }) => {
     login,
     googleSignIn,
     logout,
-    sendEmailVerification,
     resetPassword,
     loading
   };
@@ -193,7 +139,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-function getFirebaseErrorMessage(code) {
+export function getFirebaseErrorMessage(code) {
   switch (code) {
     case 'auth/email-already-in-use': return 'Email already in use.';
     case 'auth/invalid-email': return 'Invalid email address.';
